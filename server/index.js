@@ -5,14 +5,30 @@ const cors = require('cors')
 const axios = require('axios')
 
 const app = express()
-app.use(cors())
+
+// Configure CORS
+app.use(cors({
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST'],
+  credentials: true
+}))
 
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
+    origin: '*', // Allow all origins
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'], // Enable both WebSocket and polling
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  pingTimeout: 60000, // Increase ping timeout
+  pingInterval: 25000, // Increase ping interval
+})
+
+// Add health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' })
 })
 
 // Store room data in memory
@@ -70,7 +86,17 @@ io.on('connection', (socket) => {
 
   // Add user to room
   const room = rooms.get(roomId)
-  room.users.set(socket.id, { name, isHost: isHost === 'true' })
+  
+  // Check if user already exists in the room
+  const existingUser = Array.from(room.users.values()).find(u => u.name === name)
+  if (existingUser) {
+    // Update the socket ID for the existing user
+    room.users.delete(socket.id)
+    room.users.set(socket.id, { name, isHost: isHost === 'true' })
+  } else {
+    // Add new user
+    room.users.set(socket.id, { name, isHost: isHost === 'true' })
+  }
 
   // If host joins, update host ID
   if (isHost === 'true') {
@@ -198,24 +224,29 @@ io.on('connection', (socket) => {
   // Handle disconnection
   socket.on('disconnect', () => {
     if (room) {
-      room.users.delete(socket.id)
-      
-      // Emit updated user list
-      io.to(roomId).emit('userList', {
-        users: Array.from(room.users.values()),
-        count: room.users.size
-      })
+      // Only remove the user if they're still in the room
+      if (room.users.has(socket.id)) {
+        room.users.delete(socket.id)
+        
+        // Emit updated user list
+        io.to(roomId).emit('userList', {
+          users: Array.from(room.users.values()),
+          count: room.users.size
+        })
 
-      if (socket.id === room.host) {
-        // If host disconnects, close the room
-        rooms.delete(roomId)
-        io.to(roomId).emit('roomClosed')
+        if (socket.id === room.host) {
+          // If host disconnects, close the room
+          rooms.delete(roomId)
+          io.to(roomId).emit('roomClosed')
+        }
       }
     }
   })
 })
 
 const PORT = process.env.PORT || 3001
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+const HOST = process.env.HOST || '0.0.0.0' // Listen on all network interfaces
+
+httpServer.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`)
 }) 

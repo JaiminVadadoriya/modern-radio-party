@@ -58,7 +58,24 @@ export default function Room() {
     }
 
     const socketInstance = io(SOCKET_URL, {
-      query: { roomId, name, isHost }
+      query: { roomId, name, isHost },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      forceNew: true
+    })
+
+    // Add connection error handling
+    socketInstance.on('connect_error', (error) => {
+      console.error('Connection error:', error)
+      toast.error('Failed to connect to server. Retrying...')
+    })
+
+    socketInstance.on('connect_timeout', () => {
+      console.error('Connection timeout')
+      toast.error('Connection timeout. Please check your internet connection.')
     })
 
     socketInstance.on('connect', () => {
@@ -120,7 +137,16 @@ export default function Room() {
     })
 
     socketInstance.on('userList', ({ users: roomUsers, count }) => {
-      setUsers(roomUsers)
+      // Remove duplicates based on name
+      const uniqueUsers = roomUsers.reduce((acc: User[], user: User) => {
+        const existingUser = acc.find((u: User) => u.name === user.name)
+        if (!existingUser) {
+          acc.push(user)
+        }
+        return acc
+      }, [] as User[])
+      
+      setUsers(uniqueUsers)
     })
 
     socketInstance.on('roomState', (state: RoomState) => {
@@ -146,7 +172,9 @@ export default function Room() {
     }
 
     return () => {
-      socketInstance.disconnect()
+      if (socketInstance.connected) {
+        socketInstance.disconnect()
+      }
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current)
       }
