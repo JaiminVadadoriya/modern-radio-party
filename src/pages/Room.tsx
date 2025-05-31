@@ -219,7 +219,7 @@ export default function Room() {
   }
 
   const handleCopyRoomLink = () => {
-    const roomLink = `${window.location.origin}/#/room/${roomId}`
+    const roomLink = `${window.location.origin}/modern-radio-party/#/room/${roomId}`
     navigator.clipboard.writeText(roomLink)
     toast.success('Room link copied!')
     setShowShareModal(false)
