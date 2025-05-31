@@ -3,8 +3,9 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { Socket, io } from 'socket.io-client'
 import toast from 'react-hot-toast'
 import YouTube from 'react-youtube'
-import { FaUsers, FaHeadphones, FaCrown, FaMusic, FaPalette, FaMagic, FaTrash } from 'react-icons/fa'
-import { BiTime } from 'react-icons/bi'
+import { FaUsers, FaHeadphones, FaCrown, FaMusic, FaPalette, FaMagic, FaTrash, FaPaperPlane, FaVolumeUp, FaUserCircle, FaLink, FaCopy } from 'react-icons/fa'
+import { BiTime, BiPlus } from 'react-icons/bi'
+import { HiSparkles, HiLightningBolt } from 'react-icons/hi'
 import { themes, getThemeClasses } from '../config/themes'
 import type { Message, Song, User, Theme, RoomState } from '../types'
 
@@ -27,6 +28,7 @@ export default function Room() {
   const [theme, setTheme] = useState<Theme>(themes[0])
   const [isDynamicTheme, setIsDynamicTheme] = useState(false)
   const [showThemeSelector, setShowThemeSelector] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const playerRef = useRef<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const syncIntervalRef = useRef<number>()
@@ -195,46 +197,103 @@ export default function Room() {
     socket.emit('updatePlaylist', updatedPlaylist)
   }
 
+  const handleCopyRoomLink = () => {
+    const roomLink = `${window.location.origin}/#/room/${roomId}`
+    navigator.clipboard.writeText(roomLink)
+    toast.success('Room link copied!')
+    setShowShareModal(false)
+  }
+
   const classes = getThemeClasses(theme)
 
   return (
-    <div className={`min-h-screen ${classes.bg} ${classes.text}`}>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Room: {roomId}</h1>
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <FaUsers className={classes.accent} />
-              <span>{users.length} users</span>
+    <div className={`min-h-screen ${classes.bg} transition-all duration-1000 ease-in-out relative overflow-hidden`}>
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-white/3 to-transparent rounded-full blur-3xl animate-pulse delay-500"></div>
+      </div>
+
+      <div className="relative z-10 container mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-6 mb-8 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <FaMusic className="text-white text-xl" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    Room {roomId}
+                  </h1>
+                  <p className="text-sm text-gray-300">Live Music Session</p>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <FaHeadphones className="text-green-400" />
-              <span>{users.filter(u => !u.isHost).length} listeners</span>
+            
+            <div className="flex items-center space-x-4">
+              {/* Stats */}
+              <div className="flex items-center space-x-6 bg-black/20 rounded-2xl px-6 py-3 backdrop-blur-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <FaUsers className="text-blue-400" />
+                  <span className="font-semibold">{users.length}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaHeadphones className="text-green-400" />
+                  <span className="font-semibold">{users.filter(u => !u.isHost).length}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="p-3 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-blue-500/25 hover:scale-105"
+                  title="Share Room"
+                >
+                  <FaLink className="text-white" />
+                </button>
+                
+                {isHost && (
+                  <button
+                    onClick={() => setShowThemeSelector(!showThemeSelector)}
+                    className="p-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 hover:scale-105"
+                    title="Change Theme"
+                  >
+                    <FaPalette className="text-white" />
+                  </button>
+                )}
+              </div>
             </div>
-            {isHost && (
-              <button
-                onClick={() => setShowThemeSelector(!showThemeSelector)}
-                className={`p-2 rounded ${classes.accentBg}`}
-                title="Change Theme"
-              >
-                <FaPalette />
-              </button>
-            )}
           </div>
         </div>
 
+        {/* Theme Selector */}
         {showThemeSelector && isHost && (
-          <div className={`mb-8 p-6 rounded-lg ${classes.secondary}`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Theme Settings</h3>
+          <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-8 mb-8 animate-slide-down">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <HiSparkles className="text-2xl text-purple-400" />
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  Theme Studio
+                </h3>
+              </div>
               <button
                 onClick={handleToggleDynamicTheme}
-                className={`flex items-center space-x-2 px-4 py-2 rounded ${
-                  isDynamicTheme ? 'bg-purple-600 hover:bg-purple-700' : classes.accentBg
+                className={`flex items-center space-x-3 px-6 py-3 rounded-2xl transition-all duration-300 shadow-lg hover:scale-105 ${
+                  isDynamicTheme 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' 
+                    : 'bg-white/20 hover:bg-white/30'
                 }`}
               >
-                <FaMagic />
-                <span>Dynamic Theme: {isDynamicTheme ? 'On' : 'Off'}</span>
+                <FaMagic className={isDynamicTheme ? 'text-white' : 'text-purple-400'} />
+                <span className={`font-semibold ${isDynamicTheme ? 'text-white' : 'text-gray-300'}`}>
+                  Dynamic: {isDynamicTheme ? 'On' : 'Off'}
+                </span>
+                {isDynamicTheme && <HiLightningBolt className="text-yellow-300" />}
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -242,31 +301,69 @@ export default function Room() {
                 <button
                   key={t.id}
                   onClick={() => handleThemeChange(t)}
-                  className={`p-4 rounded-lg ${
-                    theme.id === t.id ? 'ring-2 ring-offset-2 ring-blue-500' : ''
-                  } bg-gradient-to-br ${t.bgColor}`}
+                  className={`group relative p-6 rounded-2xl transition-all duration-300 hover:scale-105 ${
+                    theme.id === t.id 
+                      ? 'ring-4 ring-white/50 shadow-2xl' 
+                      : 'hover:ring-2 hover:ring-white/30'
+                  } bg-gradient-to-br ${t.bgColor} shadow-lg`}
                 >
-                  <span className={t.textColor}>{t.name}</span>
+                  <div className="text-center">
+                    <div className={`text-lg font-bold ${t.textColor} mb-2`}>{t.name}</div>
+                    <div className="w-full h-2 rounded-full bg-white/20 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-white/40 to-white/60 rounded-full transform translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                    </div>
+                  </div>
+                  {theme.id === t.id && (
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
+                      <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className={`rounded-lg overflow-hidden ${classes.secondary}`}>
-              <div className={`p-4 ${classes.secondary}`}>
-                <h2 className="text-2xl font-bold flex items-center space-x-2">
-                  <span>Now Playing</span>
-                  {isPlaying && <span className="text-green-400">▶</span>}
-                </h2>
+          <div className="xl:col-span-3 space-y-8">
+            {/* Now Playing */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-fade-in-up">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-3">
+                      {isPlaying && (
+                        <div className="flex space-x-1">
+                          <div className="w-1 h-8 bg-gradient-to-t from-green-400 to-emerald-300 rounded-full animate-pulse"></div>
+                          <div className="w-1 h-6 bg-gradient-to-t from-green-400 to-emerald-300 rounded-full animate-pulse delay-75"></div>
+                          <div className="w-1 h-10 bg-gradient-to-t from-green-400 to-emerald-300 rounded-full animate-pulse delay-150"></div>
+                          <div className="w-1 h-7 bg-gradient-to-t from-green-400 to-emerald-300 rounded-full animate-pulse delay-300"></div>
+                        </div>
+                      )}
+                      <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                        Now Playing
+                      </h2>
+                    </div>
+                  </div>
+                  {isPlaying && <FaVolumeUp className="text-green-400 text-2xl animate-pulse" />}
+                </div>
                 {currentSong && (
-                  <p className={`mt-2 ${classes.accent}`}>{currentSong.title}</p>
+                  <div className="flex items-center space-x-4 mb-6">
+                    <img
+                      src={currentSong.thumbnail}
+                      alt={currentSong.title}
+                      className="w-16 h-12 object-cover rounded-xl shadow-lg"
+                    />
+                    <div>
+                      <p className="text-xl font-semibold text-white line-clamp-1">{currentSong.title}</p>
+                      <p className="text-gray-300">Added by {currentSong.addedBy}</p>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="aspect-video">
+              
+              <div className="aspect-video bg-black/50 backdrop-blur-sm">
                 {currentSong ? (
                   <YouTube
                     videoId={currentSong.id}
@@ -285,19 +382,31 @@ export default function Room() {
                     className="w-full h-full"
                   />
                 ) : (
-                  <div className={`w-full h-full ${classes.secondary} flex items-center justify-center`}>
-                    <p className="text-gray-400">No song playing</p>
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <FaMusic className="text-6xl text-gray-400 mx-auto mb-4 opacity-50" />
+                      <p className="text-xl text-gray-400">No song playing</p>
+                      <p className="text-gray-500 mt-2">Waiting for the host to add music...</p>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Host Controls */}
             {isHost && (
-              <div className={`rounded-lg p-6 ${classes.secondary}`}>
-                <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                  <FaCrown className="text-yellow-400" />
-                  <span>Host Controls</span>
-                </h3>
+              <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-8 animate-fade-in-up delay-100">
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <FaCrown className="text-white text-xl" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                      Host Controls
+                    </h3>
+                    <p className="text-gray-300">Add music to keep the party going</p>
+                  </div>
+                </div>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
@@ -307,51 +416,68 @@ export default function Room() {
                       input.value = ''
                     }
                   }}
-                  className="flex gap-2"
+                  className="flex gap-4"
                 >
-                  <input
-                    type="text"
-                    placeholder="Paste YouTube URL"
-                    className={`flex-1 px-4 py-2 rounded ${classes.input}`}
-                  />
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      placeholder="Paste YouTube URL here..."
+                      className="w-full px-6 py-4 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300"
+                    />
+                  </div>
                   <button
                     type="submit"
-                    className={`px-6 py-2 rounded font-medium ${classes.accentBg}`}
+                    className="px-8 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 flex items-center space-x-2"
                   >
-                    Add Song
+                    <BiPlus className="text-xl" />
+                    <span>Add Song</span>
                   </button>
                 </form>
               </div>
             )}
 
             {/* Playlist */}
-            <div className={`rounded-lg p-6 ${classes.secondary}`}>
-              <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                <FaMusic className={classes.accent} />
-                <span>Playlist</span>
-                <span className="text-sm text-gray-400">({playlist.length} songs)</span>
-              </h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-8 animate-fade-in-up delay-200">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <FaMusic className="text-white text-xl" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                      Up Next
+                    </h3>
+                    <p className="text-gray-300">{playlist.length} songs in queue</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
                 {playlist.map((song, index) => (
                   <div
                     key={`${song.id}-${index}`}
-                    className={`flex items-center justify-between p-3 rounded ${classes.secondary} ${classes.secondaryHover}`}
+                    className="group flex items-center justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20"
                   >
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={song.thumbnail}
-                        alt={song.title}
-                        className="w-16 h-9 object-cover rounded"
-                      />
-                      <div>
-                        <p className="font-medium">{song.title}</p>
-                        <p className="text-sm text-gray-400">Added by: {song.addedBy}</p>
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="relative">
+                        <img
+                          src={song.thumbnail}
+                          alt={song.title}
+                          className="w-16 h-12 object-cover rounded-xl shadow-lg"
+                        />
+                        <div className="absolute inset-0 bg-black/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <span className="text-white font-bold text-xs">#{index + 1}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-white truncate mb-1">{song.title}</p>
+                        <p className="text-sm text-gray-400">Added by {song.addedBy}</p>
                       </div>
                     </div>
                     {isHost && (
                       <button
                         onClick={() => handleRemoveFromPlaylist(song.id)}
-                        className="p-2 text-red-400 hover:text-red-300"
+                        className="p-3 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100"
                         title="Remove from playlist"
                       >
                         <FaTrash />
@@ -360,72 +486,112 @@ export default function Room() {
                   </div>
                 ))}
                 {playlist.length === 0 && (
-                  <p className="text-center text-gray-400">No songs in playlist</p>
+                  <div className="text-center py-12">
+                    <FaMusic className="text-6xl text-gray-400 mx-auto mb-4 opacity-30" />
+                    <p className="text-xl text-gray-400">No songs in queue</p>
+                    <p className="text-gray-500 mt-2">
+                      {isHost ? 'Add some music to get started!' : 'Waiting for the host to add songs...'}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Users List */}
-            <div className={`rounded-lg p-6 ${classes.secondary}`}>
-              <h3 className="text-xl font-bold mb-4">Users</h3>
-              <div className="space-y-2">
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-6 animate-fade-in-right">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <FaUsers className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  Listeners
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar">
                 {users.map((user, index) => (
                   <div
                     key={index}
-                    className={`flex items-center justify-between p-3 rounded ${classes.secondary}`}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 group"
                   >
-                    <div className="flex items-center space-x-2">
-                      {user.isHost ? (
-                        <FaCrown className="text-yellow-400" />
-                      ) : (
-                        <FaHeadphones className="text-green-400" />
-                      )}
-                      <span>{user.name}</span>
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <FaUserCircle className={`text-2xl ${user.isHost ? 'text-yellow-400' : 'text-blue-400'}`} />
+                        {user.isHost && (
+                          <FaCrown className="absolute -top-1 -right-1 text-xs text-yellow-400" />
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-medium text-white">{user.name}</span>
+                        {user.isHost && (
+                          <span className="block text-xs text-yellow-400">Host</span>
+                        )}
+                      </div>
                     </div>
-                    {user.isHost && (
-                      <span className="text-xs text-yellow-400">Host</span>
-                    )}
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Chat Section */}
-            <div className={`rounded-lg p-6 ${classes.secondary}`}>
-              <h3 className="text-xl font-bold mb-4">Chat</h3>
-              <div className="h-[400px] flex flex-col">
-                <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-6 animate-fade-in-right delay-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <FaPaperPlane className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  Live Chat
+                </h3>
+              </div>
+              
+              <div className="h-80 flex flex-col">
+                <div className="flex-1 overflow-y-auto space-y-3 mb-4 custom-scrollbar">
                   {messages.map((message, index) => (
-                    <div key={index} className={`rounded p-3 ${classes.secondary}`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`font-medium ${classes.accent}`}>
-                          {message.user}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </span>
+                    <div key={index} className="group animate-slide-in">
+                      <div className="flex items-start space-x-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                        <FaUserCircle className="text-blue-400 text-lg mt-1 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-blue-300 text-sm truncate">
+                              {message.user}
+                            </span>
+                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                              {new Date(message.timestamp).toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-gray-200 text-sm break-words">{message.text}</p>
+                        </div>
                       </div>
-                      <p className="text-gray-200">{message.text}</p>
                     </div>
                   ))}
                   <div ref={messagesEndRef} />
+                  {messages.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">No messages yet</p>
+                      <p className="text-gray-500 text-sm mt-1">Start the conversation!</p>
+                    </div>
+                  )}
                 </div>
-                <form onSubmit={handleSendMessage} className="flex gap-2">
+                
+                <form onSubmit={handleSendMessage} className="flex gap-3">
                   <input
                     type="text"
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     placeholder="Type a message..."
-                    className={`flex-1 px-4 py-2 rounded ${classes.input}`}
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300"
                   />
                   <button
                     type="submit"
-                    className={`px-4 py-2 rounded font-medium ${classes.accentBg}`}
+                    className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
                   >
-                    Send
+                    <FaPaperPlane />
                   </button>
                 </form>
               </div>
@@ -433,6 +599,36 @@ export default function Room() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-96 shadow-lg animate-fade-in">
+            <h3 className="text-xl font-bold mb-4">Share Room</h3>
+            <p className="text-gray-600 mb-4">Share this link with your friends to join the room:</p>
+            <div className="flex items-center space-x-3 mb-4">
+              <input
+                type="text"
+                readOnly
+                value={`${window.location.origin}/#/room/${roomId}`}
+                className="flex-1 px-4 py-3 rounded-xl bg-gray-100 border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
+              <button
+                onClick={handleCopyRoomLink}
+                className="px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-300"
+              >
+                <FaCopy />
+              </button>
+            </div>
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="w-full px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-all duration-300"
+            >
+              Close
+            </button>
+          </div>  
+        </div>
+      )}  
     </div>
   )
-} 
+}
