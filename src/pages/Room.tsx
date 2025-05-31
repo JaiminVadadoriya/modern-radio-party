@@ -7,10 +7,23 @@ import { FaUsers, FaHeadphones, FaCrown, FaMusic, FaPalette, FaMagic, FaTrash, F
 import { BiTime, BiPlus } from 'react-icons/bi'
 import { HiSparkles, HiLightningBolt } from 'react-icons/hi'
 import { themes, getThemeClasses } from '../config/themes'
+import { extractColorsFromImage } from '../utils/colorUtils'
 import type { Message, Song, User, Theme, RoomState } from '../types'
 
 // Default Socket.IO server URL
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001'
+
+// Add this function after the imports and before the Room component
+const createDynamicTheme = (colors: { primary: string; secondary: string; text: string; accent: string }): Theme => {
+  return {
+    id: 'dynamic',
+    name: 'Dynamic',
+    bgColor: `from-[${colors.primary}] to-[${colors.secondary}]`,
+    textColor: `text-[${colors.text}]`,
+    accentColor: colors.accent.replace('#', ''),
+    secondaryColor: colors.secondary.replace('#', '')
+  }
+}
 
 export default function Room() {
   const { roomId } = useParams()
@@ -63,10 +76,18 @@ export default function Room() {
       setMessages(prev => [...prev, message])
     })
 
-    socketInstance.on('songChange', (song: Song) => {
+    socketInstance.on('songChange', async (song: Song) => {
       setCurrentSong(song)
       if (isDynamicTheme && song?.thumbnail) {
-        // TODO: Extract dominant colors from thumbnail and create dynamic theme
+        try {
+          // Get thumbnail URL
+          const thumbnailUrl = `https://i.ytimg.com/vi_webp/${song.id}/mqdefault.webp`
+          const colors = await extractColorsFromImage(thumbnailUrl)
+          const dynamicTheme = createDynamicTheme(colors)
+          socketInstance.emit('updateTheme', dynamicTheme)
+        } catch (error) {
+          console.error('Error creating dynamic theme:', error)
+        }
       }
     })
 
@@ -610,7 +631,7 @@ export default function Room() {
               <input
                 type="text"
                 readOnly
-                value={`${window.location.origin}/#/room/${roomId}`}
+                value={`${window.location.origin}/modern-radio-party/#/room/${roomId}`}
                 className="flex-1 px-4 py-3 rounded-xl bg-gray-100 border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
               <button

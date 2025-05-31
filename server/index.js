@@ -129,9 +129,12 @@ io.on('connection', (socket) => {
   // Handle theme changes
   socket.on('updateTheme', (theme) => {
     if (socket.id === room.host) {
-      room.theme = theme
-      room.isDynamicTheme = false
-      io.to(roomId).emit('themeUpdate', { theme, isDynamicTheme: false })
+      // Ensure theme has all required properties
+      if (theme && theme.id && theme.name && theme.bgColor && theme.textColor && theme.accentColor && theme.secondaryColor) {
+        room.theme = theme
+        room.isDynamicTheme = theme.id === 'dynamic'
+        io.to(roomId).emit('themeUpdate', { theme, isDynamicTheme: room.isDynamicTheme })
+      }
     }
   })
 
