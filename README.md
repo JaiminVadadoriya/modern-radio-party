@@ -22,7 +22,7 @@ A real-time, host-driven music sharing platform where users can create or join t
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/modern-radio-party.git
+git clone https://github.com/jaiminvadadoriya/modern-radio-party.git
 cd modern-radio-party
 ```
 
